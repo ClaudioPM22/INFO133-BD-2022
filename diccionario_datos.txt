@@ -1,0 +1,23 @@
+Medio de prensa
+↳Tipo (regional o local) VARCHAR(10)
+ Nombre VARCHAR(300)
+ Fecha de creación DATE
+ URL VARCHAR(500)
+ Región VARCHAR(4)
+ País VARCHAR(10)
+ Idioma VARCHAR(20)
+ Noticia
+ ↳URL VARCHAR(500)
+  Título VARCHAR(300)
+  Fecha de publicación DATE
+  Contenido textual TEXT
+ Personas mencionadas
+ ↳Nombre VARCHAR(100)
+  Profesión VARCHAR(50)
+  Fecha de nacimiento DATE
+  Nacionalidad (30)
+  Popularidad INT
+ Dueños
+ ↳Nombre VARCHAR(100)
+  Tipo (persona o empresa) VARCHAR(10)
+  Fecha de adquisición DATE
