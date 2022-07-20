@@ -1,8 +1,15 @@
+from asyncio.windows_events import NULL
 import mysql.connector
 import random
 from requests_html import HTMLSession
 import spacy
 import warnings
+import wikipedia #py -3.8-64 c:/Users/Andrés/Desktop/Untitled-1.py
+import pageviewapi
+from transformers import AutoModelForQuestionAnswering, AutoTokenizer
+from transformers import pipeline
+wikipedia.set_lang("es")
+
 warnings.filterwarnings("ignore")
 
 nlp = spacy.load("es_core_news_md")
@@ -95,16 +102,16 @@ def main():
     except:
         print ("Las claves foráneas ya han sido creadas")
     print("La base de datos se ha creado correctamente")
-    pregunta = input("Le gustaría ingresar datos? S/N= ")
-    if (pregunta == "S"): pregunta = True
-    else: 
-        pregunta = False
-        print("El programa ha finalizado")
-        insert_data(usuario, contraseña)
+    #pregunta = input("Le gustaría ingresar datos? S/N= ")
+    #if (pregunta == "S"): pregunta = True
+    #else: 
+    #    pregunta = False
+    #    print("El programa ha finalizado")
+    #    insert_data(usuario, contraseña)
     session = HTMLSession()
 
     ## URL que escrapear
-    URL = "https://elcontraste.cl/secci%C3%B3n/region/"S
+    URL = "https://elcontraste.cl/secci%C3%B3n/region/"
 
     ## Simular que estamos utilizando un navegador web
     USER_AGENT_LIST = [
@@ -170,8 +177,7 @@ def main():
             listaCuerpoNoticia.append((cuerpo_Noticia[1].text)+'\n'+(cuerpo_Noticia[2].text)+'\n'+cuerpo_Noticia[3].text)
             persona = nlp(listaCuerpoNoticia[i])
             for ent in persona.ents:
-                if ((ent.label_ == "PER") and (" " in ent.text)):
-                    
+                if (ent.label_ == "PER"): #and (" " in ent.text)):
                     #persona mencionada
                     person = ent.text
                     print(person)
@@ -179,6 +185,51 @@ def main():
                     print("--------------------")
             listaPersonasBase.append(listaPersonas)
             listaPersonas=[]
+    mydb = mysql.connector.connect(
+        host = "localhost",
+        user = usuario,
+        password = contraseña,
+        database = "biobio_test"
+    )
+    mycursor = mydb.cursor()
+
+    ES_MODEL_LANGUAGE="mrm8488/bert-base-spanish-wwm-cased-finetuned-spa-squad2-es"
+
+    tokenizer_es_language = AutoTokenizer.from_pretrained(ES_MODEL_LANGUAGE)
+    model_es_language = AutoModelForQuestionAnswering.from_pretrained(ES_MODEL_LANGUAGE)
+
+    q_a_es = pipeline("question-answering", model=model_es_language, tokenizer=tokenizer_es_language)
+    for j in range(len(listaPersonasBase)):
+        print(listaPersonasBase[j])
+    for j in range (len(listaPersonasBase)):
+        try:
+            consulta = wikipedia.summary(listaPersonasBase[j])
+        except:
+            print("la persona indicada no tiene página en wikipedia")
+            persona = listaPersonasBase[j]
+            profesion = NULL
+            fecha_nacimiento = NULL
+            nacionalidad = NULL
+            popularidad = NULL
+            val = (person, profesion, fecha_nacimiento, nacionalidad, popularidad)
+            sql = ("INSERT INTO personas (Nombre, Profesion, Fecha_nacimiento, Nacionalidad, Popularidad) VALUES (%s, %s, %s, %s, %s)")
+            mycursor.execute(sql, val)
+            mydb.commit()
+            break
+        persona = listaPersonasBase[j]
+        result = q_a_es(question="¿cuál es su profesión?", context= consulta)
+        profesion = result["answer"]
+        result = q_a_es(question="¿en que año nació?", context= consulta)
+        fecha_nacimiento = result["answer"]
+        result = q_a_es(question="¿cuál es su nacionalidad?", context= consulta)
+        nacionalidad = result["answer"]
+        ola=pageviewapi.per_article('es.wikipedia', listaPersonasBase[j], '20220705', '20220705',access='all-access', agent='all-agents', granularity='daily')
+        popularidad = str(ola["items"][0]["views"])
+        val = (person, profesion, fecha_nacimiento, nacionalidad, popularidad)
+        sql = ("INSERT INTO personas (Nombre, Profesion, Fecha_nacimiento, Nacionalidad, Popularidad) VALUES (%s, %s, %s, %s, %s)")
+        mycursor.execute(sql, val)
+        mydb.commit()
+        
     print('\n'.join(map(str, listaTitulos)))
     print('\n'.join(map(str, listaURL)))
     print('\n'.join(map(str, listaDate)))
@@ -192,4 +243,3 @@ def main():
     print(cuerpo_Noticia[2].text)
     print(cuerpo_Noticia[3].text)
     insert_data(usuario, contraseña, listaURL, listaTitulos, listaDate, listaCuerpoNoticia, n)
-main()  
