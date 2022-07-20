@@ -104,7 +104,7 @@ def main():
     session = HTMLSession()
 
     ## URL que escrapear
-    URL = "https://elcontraste.cl/secci%C3%B3n/region/"
+    URL = "https://elcontraste.cl/secci%C3%B3n/region/"S
 
     ## Simular que estamos utilizando un navegador web
     USER_AGENT_LIST = [
